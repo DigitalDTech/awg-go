@@ -33,6 +33,23 @@ When the kernel module is unavailable, `awg-quick` can fall back to the
 included `amneziawg-go` userspace implementation, so the package is usable as a
 single install for the userspace path.
 
+## Minimum supported target distros
+
+The CI-produced `.deb` packages target these minimum distro versions:
+
+- Ubuntu 22.04 LTS or newer
+- Debian 12 or newer
+
+Architectures built by CI:
+
+- `amd64`
+- `arm64`
+
+These minimums describe the packages produced by this repo's CI pipeline, not
+every environment where the upstream projects might compile from source. If you
+need older distributions than the list above, rebuild locally against an older
+toolchain and libc baseline.
+
 ## CI build
 
 The workflow at `.github/workflows/build-debian-packages.yml` builds `ddt-awg`
@@ -45,11 +62,12 @@ Each run uploads the generated `.deb` files as GitHub Actions artifacts.
 
 ## Local build
 
-On a Debian or Ubuntu build machine:
+On a Debian or Ubuntu build machine with Go 1.24.4 or newer available in
+`PATH`:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential golang-go dpkg-dev fakeroot pkg-config systemd gcc-aarch64-linux-gnu
+sudo apt-get install -y build-essential dpkg-dev fakeroot pkg-config systemd gcc-aarch64-linux-gnu
 ./packaging/build-deb.sh amd64
 ./packaging/build-deb.sh arm64
 ```
