@@ -1,0 +1,76 @@
+name: Build Debian Packages
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: Optional Debian package name override
+        required: false
+        type: string
+      package_version:
+        description: Optional Debian package version override
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build .deb packages
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+          - arm64
+    env:
+      PACKAGE_NAME: ${{ github.event.inputs.package_name || 'ddt-awg' }}
+      PACKAGE_VERSION: ${{ github.event.inputs.package_version || '' }}
+      MAINTAINER: AWG Build Workflow <41898282+github-actions[bot]@users.noreply.github.com>
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out submodules over HTTPS
+        run: |
+          git config submodule.amneziawg-go.url https://github.com/amnezia-vpn/amneziawg-go.git
+          git config submodule.amneziawg-tools.url https://github.com/amnezia-vpn/amneziawg-tools.git
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            dpkg-dev \
+            fakeroot \
+            gcc-aarch64-linux-gnu \
+            golang-go \
+            pkg-config \
+            shellcheck \
+            systemd
+
+      - name: Lint packaging script
+        run: shellcheck packaging/build-deb.sh
+
+      - name: Build package
+        run: ./packaging/build-deb.sh "${{ matrix.arch }}"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-package-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
